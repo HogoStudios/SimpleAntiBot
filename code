@@ -1,0 +1,41 @@
+import org.bukkit.Bukkit;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+public class BotBlocker extends JavaPlugin implements Listener {
+
+    // Map to store the number of players that have joined in the same second
+    private ConcurrentHashMap<Long, Integer> playerJoins = new ConcurrentHashMap<>();
+
+    @Override
+    public void onEnable() {
+        // Register the plugin
+        getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        // Get the current time in seconds
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        // Increment the number of players that have joined in the same second
+        int playerCount = playerJoins.getOrDefault(currentTime, 0) + 1;
+        playerJoins.put(currentTime, playerCount);
+
+        // If more than 50 players have joined in the same second, enable the whitelist
+        if (playerCount > 50) {
+            Bukkit.setWhitelist(true);
+            Bukkit.broadcastMessage("Whitelist enabled due to suspected bot attack.");
+
+            // Schedule a task to disable the whitelist after 3 minutes
+            getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
+                Bukkit.setWhitelist(false);
+                Bukkit.broadcastMessage("Whitelist disabled.");
+            }, 20 * 60 * 3);
+        }
+    }
+}
